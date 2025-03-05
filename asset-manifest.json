@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/rockerman/static/css/main.f855e6bc.css",
+    "main.js": "/rockerman/static/js/main.0e7803eb.js",
+    "index.html": "/rockerman/index.html",
+    "main.f855e6bc.css.map": "/rockerman/static/css/main.f855e6bc.css.map",
+    "main.0e7803eb.js.map": "/rockerman/static/js/main.0e7803eb.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.f855e6bc.css",
+    "static/js/main.0e7803eb.js"
+  ]
+}
