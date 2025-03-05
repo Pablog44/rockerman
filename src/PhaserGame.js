@@ -12,12 +12,18 @@ function PhaserGame() {
       type: Phaser.AUTO,
       width: 480,
       height: 416,
+      scale: {
+        mode: Phaser.Scale.FIT, // Ajustar al contenedor manteniendo proporción
+        autoCenter: Phaser.Scale.CENTER_BOTH, // Centrar en el contenedor
+        width: 480,
+        height: 416,
+      },
       parent: gameRef.current,
       physics: {
         default: 'arcade',
         arcade: {
           gravity: { y: 0 },
-          debug: false, // Desactivado para ocultar colisiones y vectores
+          debug: false,
         },
       },
       audio: {
@@ -136,7 +142,7 @@ function PhaserGame() {
           pos.y * tileSize + tileSize / 2,
           'breakable'
         );
-        breakable.hits = 0; // Contador de golpes
+        breakable.hits = 0;
       });
       console.log('Obstáculos destructibles creados');
 
@@ -437,7 +443,27 @@ function PhaserGame() {
     };
   }, []);
 
-  return <div ref={gameRef} style={{ width: '480px', height: '416px', border: '1px solid red' }} />;
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        width: '100vw',
+        backgroundColor: '#000',
+      }}
+    >
+      <div
+        ref={gameRef}
+        style={{
+          width: `${window.innerWidth * 0.8}px`,
+          height: `${window.innerHeight * 0.8}px`,
+          border: '1px solid red',
+        }}
+      />
+    </div>
+  );
 }
 
 export default PhaserGame;

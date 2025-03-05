@@ -5,7 +5,7 @@ import PhaserGame from './PhaserGame';
 function App() {
   return (
     <div className="App">
-      <h1>Juego tipo Bomberman</h1>
+      <h1>Rockerman</h1>
       <PhaserGame />
     </div>
   );
