@@ -3,19 +3,28 @@ import Phaser from 'phaser';
 
 function PhaserGame() {
   const gameRef = useRef(null);
+  const gameInstance = useRef(null);
 
   useEffect(() => {
+    if (gameInstance.current) return;
+
     const config = {
       type: Phaser.AUTO,
-      width: 480, // 15 columnas * 32px
-      height: 416, // 13 filas * 32px
+      width: 480,
+      height: 416,
       parent: gameRef.current,
       physics: {
         default: 'arcade',
         arcade: {
           gravity: { y: 0 },
-          debug: false, // Cambia a true si quieres depurar
+          debug: true, // Activado para depurar colisiones
         },
+      },
+      audio: {
+        disableWebAudio: true,
+      },
+      input: {
+        gamepad: true, // Habilitar soporte para gamepads explícitamente
       },
       scene: {
         preload: preload,
@@ -24,33 +33,40 @@ function PhaserGame() {
       },
     };
 
-    const game = new Phaser.Game(config);
+    gameInstance.current = new Phaser.Game(config);
 
     function preload() {
-      // --- Jugador ---
-      let playerGraphics = this.make.graphics({ x: 0, y: 0, add: false });
-      playerGraphics.fillStyle(0x00ff00, 1);
-      playerGraphics.fillRect(0, 0, 24, 24);
-      playerGraphics.lineStyle(2, 0xffffff, 1);
-      playerGraphics.beginPath();
-      playerGraphics.moveTo(12, 12);
-      playerGraphics.lineTo(24, 12);
-      playerGraphics.strokePath();
-      playerGraphics.generateTexture('player', 24, 24);
+      console.log('Preload ejecutado');
+      let player1Graphics = this.make.graphics({ x: 0, y: 0, add: false });
+      player1Graphics.fillStyle(0x00ff00, 1);
+      player1Graphics.fillRect(0, 0, 24, 24);
+      player1Graphics.lineStyle(2, 0xffffff, 1);
+      player1Graphics.beginPath();
+      player1Graphics.moveTo(12, 12);
+      player1Graphics.lineTo(24, 12);
+      player1Graphics.strokePath();
+      player1Graphics.generateTexture('player1', 24, 24);
 
-      // --- Pared ---
+      let player2Graphics = this.make.graphics({ x: 0, y: 0, add: false });
+      player2Graphics.fillStyle(0xff0000, 1);
+      player2Graphics.fillRect(0, 0, 24, 24);
+      player2Graphics.lineStyle(2, 0xffffff, 1);
+      player2Graphics.beginPath();
+      player2Graphics.moveTo(12, 12);
+      player2Graphics.lineTo(24, 12);
+      player2Graphics.strokePath();
+      player2Graphics.generateTexture('player2', 24, 24);
+
       let wallGraphics = this.make.graphics({ x: 0, y: 0, add: false });
       wallGraphics.fillStyle(0x888888, 1);
       wallGraphics.fillRect(0, 0, 32, 32);
       wallGraphics.generateTexture('wall', 32, 32);
 
-      // --- Roca ---
       let rockGraphics = this.make.graphics({ x: 0, y: 0, add: false });
       rockGraphics.fillStyle(0x964B00, 1);
       rockGraphics.fillCircle(10, 10, 10);
       rockGraphics.generateTexture('rock', 20, 20);
 
-      // --- Partículas de explosión ---
       let explosionGraphics = this.make.graphics({ x: 0, y: 0, add: false });
       explosionGraphics.fillStyle(0xffd700, 1);
       explosionGraphics.fillRect(0, 0, 6, 6);
@@ -58,12 +74,16 @@ function PhaserGame() {
     }
 
     function create() {
+      console.log('Create ejecutado');
       const tileSize = 32;
       const rows = 13;
       const cols = 15;
 
-      // Grupo de paredes (estáticas)
+      this.cameras.main.setBackgroundColor('#000000');
+      console.log('Cámara configurada');
+
       this.walls = this.physics.add.staticGroup();
+      console.log('Grupo de paredes creado');
 
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
@@ -82,29 +102,38 @@ function PhaserGame() {
           }
         }
       }
+      console.log('Paredes creadas');
 
-      // Crear el jugador en la celda (1,1)
-      this.player = this.physics.add.sprite(
+      this.player1 = this.physics.add.sprite(
         tileSize + tileSize / 2,
         tileSize + tileSize / 2,
-        'player'
+        'player1'
       );
-      this.player.setCollideWorldBounds(true);
-      this.physics.add.collider(this.player, this.walls);
+      this.player1.setCollideWorldBounds(true);
+      this.physics.add.collider(this.player1, this.walls);
+      console.log('Jugador 1 creado');
 
-      // Configurar controles
+      this.player2 = null;
+
       this.cursors = this.input.keyboard.createCursorKeys();
       this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
-      // Grupo para las rocas lanzadas
+      this.keysPlayer2 = {
+        up: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+        down: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+        left: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+        right: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+        fire: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER),
+      };
+
       this.rocks = this.physics.add.group({
         defaultKey: 'rock',
         collideWorldBounds: true,
       });
+      console.log('Grupo de rocas creado');
 
-      // Función para generar la explosión de la roca
       this.explodeRock = (rock) => {
-        if (!rock.active) return; // Evitar explosiones duplicadas
+        if (!rock.active) return;
         const numParticles = 8;
         for (let i = 0; i < numParticles; i++) {
           let angle = Phaser.Math.DegToRad(i * (360 / numParticles));
@@ -119,80 +148,197 @@ function PhaserGame() {
             },
           });
         }
-        rock.destroy(); // Destruir la roca después de explotar
+        rock.destroy();
+      };
+
+      this.launchRock = (player) => {
+        const rockSpeed = 200;
+        const angleRad = Phaser.Math.DegToRad(player.angle);
+        const rockVx = rockSpeed * Math.cos(angleRad);
+        const rockVy = rockSpeed * Math.sin(angleRad);
+
+        const offset = 25;
+        const spawnX = player.x + offset * Math.cos(angleRad);
+        const spawnY = player.y + offset * Math.sin(angleRad);
+
+        const rock = this.rocks.create(spawnX, spawnY, 'rock');
+        rock.startX = spawnX;
+        rock.startY = spawnY;
+        rock.setVelocity(rockVx, rockVy);
+        rock.body.setAllowGravity(false);
+        rock.body.setBounce(0);
+
+        this.physics.add.collider(rock, player, null, () => false, this);
+        this.physics.add.collider(rock, this.walls, () => {
+          this.explodeRock(rock);
+        });
+        if (player === this.player1 && this.player2) {
+          this.physics.add.collider(rock, this.player2, () => {
+            this.explodeRock(rock);
+            this.player2.destroy();
+            this.player2 = null;
+          });
+        } else if (player === this.player2 && this.player1) {
+          this.physics.add.collider(rock, this.player1, () => {
+            this.explodeRock(rock);
+            this.player1.destroy();
+            this.player1 = null;
+          });
+        }
       };
     }
 
     function update() {
       const tileSize = 32;
       const speed = 150;
-      let vx = 0,
-        vy = 0;
 
-      // Movimiento del jugador
-      if (this.cursors.left.isDown) {
-        vx = -speed;
-        this.player.setAngle(180);
-      } else if (this.cursors.right.isDown) {
-        vx = speed;
-        this.player.setAngle(0);
-      } else if (this.cursors.up.isDown) {
-        vy = -speed;
-        this.player.setAngle(-90);
-      } else if (this.cursors.down.isDown) {
-        vy = speed;
-        this.player.setAngle(90);
-      }
+      // Verificar si gamepad está disponible
+      const gamepad = this.input.gamepad;
+      const pad1 = gamepad && gamepad.pad1;
+      const pad2 = gamepad && gamepad.pad2;
 
-      // Corrección de alineación
-      if (this.cursors.left.isDown || this.cursors.right.isDown) {
-        const desiredY = Math.round((this.player.y - tileSize / 2) / tileSize) * tileSize + tileSize / 2;
-        const deltaY = desiredY - this.player.y;
-        const verticalCorrection = deltaY * 5;
-        this.player.setVelocity(vx, verticalCorrection);
-      } else if (this.cursors.up.isDown || this.cursors.down.isDown) {
-        const desiredX = Math.round((this.player.x - tileSize / 2) / tileSize) * tileSize + tileSize / 2;
-        const deltaX = desiredX - this.player.x;
-        const horizontalCorrection = deltaX * 5;
-        this.player.setVelocity(horizontalCorrection, vy);
+      // --- Jugador 1 ---
+      let vx1 = 0,
+        vy1 = 0;
+      if (pad1) {
+        const axisH = pad1.axes[0].getValue();
+        const axisV = pad1.axes[1].getValue();
+        if (axisH < -0.2) {
+          vx1 = -speed;
+          this.player1.setAngle(180);
+        } else if (axisH > 0.2) {
+          vx1 = speed;
+          this.player1.setAngle(0);
+        }
+        if (axisV < -0.2) {
+          vy1 = -speed;
+          this.player1.setAngle(-90);
+        } else if (axisV > 0.2) {
+          vy1 = speed;
+          this.player1.setAngle(90);
+        }
+        if (pad1.buttons[0].pressed && !this.pad1AFired) {
+          this.launchRock(this.player1);
+          this.pad1AFired = true;
+        } else if (!pad1.buttons[0].pressed) {
+          this.pad1AFired = false;
+        }
       } else {
-        this.player.setVelocity(0, 0);
+        if (this.cursors.left.isDown) {
+          vx1 = -speed;
+          this.player1.setAngle(180);
+        } else if (this.cursors.right.isDown) {
+          vx1 = speed;
+          this.player1.setAngle(0);
+        }
+        if (this.cursors.up.isDown) {
+          vy1 = -speed;
+          this.player1.setAngle(-90);
+        } else if (this.cursors.down.isDown) {
+          vy1 = speed;
+          this.player1.setAngle(90);
+        }
+        if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
+          this.launchRock(this.player1);
+        }
       }
 
-      // Lanzar roca al presionar espacio
-      if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
-        const rockSpeed = 200; // Velocidad constante de la roca
-        const angleRad = Phaser.Math.DegToRad(this.player.angle);
-        const rockVx = rockSpeed * Math.cos(angleRad);
-        const rockVy = rockSpeed * Math.sin(angleRad);
+      if (this.player1) {
+        if (vx1 !== 0) {
+          const desiredY = Math.round((this.player1.y - tileSize / 2) / tileSize) * tileSize + tileSize / 2;
+          const deltaY = desiredY - this.player1.y;
+          this.player1.setVelocity(vx1, deltaY * 5);
+        } else if (vy1 !== 0) {
+          const desiredX = Math.round((this.player1.x - tileSize / 2) / tileSize) * tileSize + tileSize / 2;
+          const deltaX = desiredX - this.player1.x;
+          this.player1.setVelocity(deltaX * 5, vy1);
+        } else {
+          this.player1.setVelocity(0, 0);
+        }
+      }
 
-        // Offset para que la roca aparezca fuera del collider del jugador
-        const offset = 25;
-        const spawnX = this.player.x + offset * Math.cos(angleRad);
-        const spawnY = this.player.y + offset * Math.sin(angleRad);
+      // --- Jugador 2 ---
+      let vx2 = 0,
+        vy2 = 0;
+      if (pad2 && !this.player2 && pad2.buttons[9].pressed && !this.pad2StartFired) {
+        console.log('Jugador 2 creado');
+        this.player2 = this.physics.add.sprite(
+          tileSize * 13 + tileSize / 2,
+          tileSize + tileSize / 2,
+          'player2'
+        );
+        this.player2.setCollideWorldBounds(true);
+        this.physics.add.collider(this.player2, this.walls);
+        if (this.player1) {
+          this.physics.add.collider(this.player1, this.player2);
+        }
+        this.pad2StartFired = true;
+      } else if (pad2 && !pad2.buttons[9].pressed) {
+        this.pad2StartFired = false;
+      }
 
-        // Crear la roca
-        const rock = this.rocks.create(spawnX, spawnY, 'rock');
-        rock.startX = spawnX; // Posición inicial para medir distancia
-        rock.startY = spawnY;
-        rock.setVelocity(rockVx, rockVy); // Asignar velocidad constante
-        rock.body.setAllowGravity(false); // Desactivar gravedad
-        rock.body.setBounce(0); // Sin rebote para evitar que se atasque
+      if (this.player2) {
+        if (pad2) {
+          const axisH = pad2.axes[0].getValue();
+          const axisV = pad2.axes[1].getValue();
+          if (axisH < -0.2) {
+            vx2 = -speed;
+            this.player2.setAngle(180);
+          } else if (axisH > 0.2) {
+            vx2 = speed;
+            this.player2.setAngle(0);
+          }
+          if (axisV < -0.2) {
+            vy2 = -speed;
+            this.player2.setAngle(-90);
+          } else if (axisV > 0.2) {
+            vy2 = speed;
+            this.player2.setAngle(90);
+          }
+          if (pad2.buttons[0].pressed && !this.pad2AFired) {
+            this.launchRock(this.player2);
+            this.pad2AFired = true;
+          } else if (!pad2.buttons[0].pressed) {
+            this.pad2AFired = false;
+          }
+        } else {
+          if (this.keysPlayer2.left.isDown) {
+            vx2 = -speed;
+            this.player2.setAngle(180);
+          } else if (this.keysPlayer2.right.isDown) {
+            vx2 = speed;
+            this.player2.setAngle(0);
+          }
+          if (this.keysPlayer2.up.isDown) {
+            vy2 = -speed;
+            this.player2.setAngle(-90);
+          } else if (this.keysPlayer2.down.isDown) {
+            vy2 = speed;
+            this.player2.setAngle(90);
+          }
+          if (Phaser.Input.Keyboard.JustDown(this.keysPlayer2.fire)) {
+            this.launchRock(this.player2);
+          }
+        }
 
-        // Evitar colisión con el jugador
-        this.physics.add.collider(rock, this.player, null, () => false, this);
-
-        // Colisión con paredes: explota al instante
-        this.physics.add.collider(rock, this.walls, () => {
-          this.explodeRock(rock);
-        });
+        if (vx2 !== 0) {
+          const desiredY = Math.round((this.player2.y - tileSize / 2) / tileSize) * tileSize + tileSize / 2;
+          const deltaY = desiredY - this.player2.y;
+          this.player2.setVelocity(vx2, deltaY * 5);
+        } else if (vy2 !== 0) {
+          const desiredX = Math.round((this.player2.x - tileSize / 2) / tileSize) * tileSize + tileSize / 2;
+          const deltaX = desiredX - this.player2.x;
+          this.player2.setVelocity(deltaX * 5, vy2);
+        } else {
+          this.player2.setVelocity(0, 0);
+        }
       }
 
       // Verificar distancia recorrida por las rocas
       this.rocks.getChildren().forEach((rock) => {
         if (rock.active) {
           const distance = Phaser.Math.Distance.Between(rock.startX, rock.startY, rock.x, rock.y);
-          if (distance >= 80) { // Explota después de 80 píxeles
+          if (distance >= 80) {
             this.explodeRock(rock);
           }
         }
@@ -200,11 +346,14 @@ function PhaserGame() {
     }
 
     return () => {
-      game.destroy(true);
+      if (gameInstance.current) {
+        gameInstance.current.destroy(true);
+        gameInstance.current = null;
+      }
     };
   }, []);
 
-  return <div ref={gameRef} />;
+  return <div ref={gameRef} style={{ width: '480px', height: '416px', border: '1px solid red' }} />;
 }
 
 export default PhaserGame;
