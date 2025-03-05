@@ -17,14 +17,14 @@ function PhaserGame() {
         default: 'arcade',
         arcade: {
           gravity: { y: 0 },
-          debug: true, // Activado para depurar colisiones
+          debug: false, // Desactivado para ocultar colisiones y vectores
         },
       },
       audio: {
         disableWebAudio: true,
       },
       input: {
-        gamepad: true, // Habilitar soporte para gamepads explícitamente
+        gamepad: true,
       },
       scene: {
         preload: preload,
@@ -37,6 +37,7 @@ function PhaserGame() {
 
     function preload() {
       console.log('Preload ejecutado');
+      // Jugador 1 (Verde)
       let player1Graphics = this.make.graphics({ x: 0, y: 0, add: false });
       player1Graphics.fillStyle(0x00ff00, 1);
       player1Graphics.fillRect(0, 0, 24, 24);
@@ -47,6 +48,7 @@ function PhaserGame() {
       player1Graphics.strokePath();
       player1Graphics.generateTexture('player1', 24, 24);
 
+      // Jugador 2 (Rojo)
       let player2Graphics = this.make.graphics({ x: 0, y: 0, add: false });
       player2Graphics.fillStyle(0xff0000, 1);
       player2Graphics.fillRect(0, 0, 24, 24);
@@ -57,16 +59,31 @@ function PhaserGame() {
       player2Graphics.strokePath();
       player2Graphics.generateTexture('player2', 24, 24);
 
+      // Pared indestructible
       let wallGraphics = this.make.graphics({ x: 0, y: 0, add: false });
       wallGraphics.fillStyle(0x888888, 1);
       wallGraphics.fillRect(0, 0, 32, 32);
       wallGraphics.generateTexture('wall', 32, 32);
 
+      // Obstáculo destructible
+      let breakableGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+      breakableGraphics.fillStyle(0x666666, 1);
+      breakableGraphics.fillRect(0, 0, 32, 32);
+      breakableGraphics.generateTexture('breakable', 32, 32);
+
+      // Enemigo (Azul)
+      let enemyGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+      enemyGraphics.fillStyle(0x0000ff, 1);
+      enemyGraphics.fillRect(0, 0, 24, 24);
+      enemyGraphics.generateTexture('enemy', 24, 24);
+
+      // Roca
       let rockGraphics = this.make.graphics({ x: 0, y: 0, add: false });
       rockGraphics.fillStyle(0x964B00, 1);
       rockGraphics.fillCircle(10, 10, 10);
       rockGraphics.generateTexture('rock', 20, 20);
 
+      // Partículas de explosión
       let explosionGraphics = this.make.graphics({ x: 0, y: 0, add: false });
       explosionGraphics.fillStyle(0xffd700, 1);
       explosionGraphics.fillRect(0, 0, 6, 6);
@@ -82,9 +99,9 @@ function PhaserGame() {
       this.cameras.main.setBackgroundColor('#000000');
       console.log('Cámara configurada');
 
+      // Paredes indestructibles
       this.walls = this.physics.add.staticGroup();
       console.log('Grupo de paredes creado');
-
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
           if (
@@ -104,6 +121,26 @@ function PhaserGame() {
       }
       console.log('Paredes creadas');
 
+      // Obstáculos destructibles
+      this.breakables = this.physics.add.staticGroup();
+      const breakablePositions = [
+        { x: 3, y: 3 },
+        { x: 5, y: 7 },
+        { x: 9, y: 5 },
+        { x: 11, y: 9 },
+        { x: 7, y: 11 },
+      ];
+      breakablePositions.forEach((pos) => {
+        let breakable = this.breakables.create(
+          pos.x * tileSize + tileSize / 2,
+          pos.y * tileSize + tileSize / 2,
+          'breakable'
+        );
+        breakable.hits = 0; // Contador de golpes
+      });
+      console.log('Obstáculos destructibles creados');
+
+      // Jugador 1
       this.player1 = this.physics.add.sprite(
         tileSize + tileSize / 2,
         tileSize + tileSize / 2,
@@ -111,10 +148,33 @@ function PhaserGame() {
       );
       this.player1.setCollideWorldBounds(true);
       this.physics.add.collider(this.player1, this.walls);
+      this.physics.add.collider(this.player1, this.breakables);
       console.log('Jugador 1 creado');
 
       this.player2 = null;
 
+      // Enemigos
+      this.enemies = this.physics.add.group();
+      const enemyPositions = [
+        { x: 5, y: 5 },
+        { x: 9, y: 9 },
+        { x: 13, y: 3 },
+      ];
+      enemyPositions.forEach((pos) => {
+        let enemy = this.enemies.create(
+          pos.x * tileSize + tileSize / 2,
+          pos.y * tileSize + tileSize / 2,
+          'enemy'
+        );
+        enemy.setCollideWorldBounds(true);
+        enemy.setVelocity(Phaser.Math.Between(-100, 100), Phaser.Math.Between(-100, 100));
+        enemy.setBounce(1);
+        this.physics.add.collider(enemy, this.walls);
+        this.physics.add.collider(enemy, this.breakables);
+      });
+      console.log('Enemigos creados');
+
+      // Controles
       this.cursors = this.input.keyboard.createCursorKeys();
       this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
@@ -126,12 +186,14 @@ function PhaserGame() {
         fire: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER),
       };
 
+      // Rocas
       this.rocks = this.physics.add.group({
         defaultKey: 'rock',
         collideWorldBounds: true,
       });
       console.log('Grupo de rocas creado');
 
+      // Funciones
       this.explodeRock = (rock) => {
         if (!rock.active) return;
         const numParticles = 8;
@@ -172,6 +234,17 @@ function PhaserGame() {
         this.physics.add.collider(rock, this.walls, () => {
           this.explodeRock(rock);
         });
+        this.physics.add.collider(rock, this.breakables, (rock, breakable) => {
+          breakable.hits += 1;
+          this.explodeRock(rock);
+          if (breakable.hits >= 2) {
+            breakable.destroy();
+          }
+        });
+        this.physics.add.collider(rock, this.enemies, (rock, enemy) => {
+          this.explodeRock(rock);
+          enemy.destroy();
+        });
         if (player === this.player1 && this.player2) {
           this.physics.add.collider(rock, this.player2, () => {
             this.explodeRock(rock);
@@ -186,13 +259,19 @@ function PhaserGame() {
           });
         }
       };
+
+      // Colisión con enemigos
+      this.physics.add.collider(this.player1, this.enemies, () => {
+        this.player1.destroy();
+        this.player1 = null;
+      });
+      this.physics.add.collider(this.enemies, this.enemies);
     }
 
     function update() {
       const tileSize = 32;
       const speed = 150;
 
-      // Verificar si gamepad está disponible
       const gamepad = this.input.gamepad;
       const pad1 = gamepad && gamepad.pad1;
       const pad2 = gamepad && gamepad.pad2;
@@ -269,6 +348,11 @@ function PhaserGame() {
         );
         this.player2.setCollideWorldBounds(true);
         this.physics.add.collider(this.player2, this.walls);
+        this.physics.add.collider(this.player2, this.breakables);
+        this.physics.add.collider(this.player2, this.enemies, () => {
+          this.player2.destroy();
+          this.player2 = null;
+        });
         if (this.player1) {
           this.physics.add.collider(this.player1, this.player2);
         }
