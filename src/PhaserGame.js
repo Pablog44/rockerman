@@ -14,7 +14,7 @@ function PhaserGame() {
         default: 'arcade',
         arcade: {
           gravity: { y: 0 },
-          debug: false,
+          debug: false, // Cambia a true si quieres depurar
         },
       },
       scene: {
@@ -28,11 +28,9 @@ function PhaserGame() {
 
     function preload() {
       // --- Jugador ---
-      // Crear textura para el jugador: cuadrado verde de 24x24 con línea indicadora
       let playerGraphics = this.make.graphics({ x: 0, y: 0, add: false });
       playerGraphics.fillStyle(0x00ff00, 1);
       playerGraphics.fillRect(0, 0, 24, 24);
-      // Línea indicadora: desde el centro (12,12) hasta el borde derecho (24,12)
       playerGraphics.lineStyle(2, 0xffffff, 1);
       playerGraphics.beginPath();
       playerGraphics.moveTo(12, 12);
@@ -41,21 +39,18 @@ function PhaserGame() {
       playerGraphics.generateTexture('player', 24, 24);
 
       // --- Pared ---
-      // Crear textura para la pared (cuadro gris de 32x32)
       let wallGraphics = this.make.graphics({ x: 0, y: 0, add: false });
       wallGraphics.fillStyle(0x888888, 1);
       wallGraphics.fillRect(0, 0, 32, 32);
       wallGraphics.generateTexture('wall', 32, 32);
 
       // --- Roca ---
-      // Crear textura para la roca (círculo marrón de 20x20)
       let rockGraphics = this.make.graphics({ x: 0, y: 0, add: false });
       rockGraphics.fillStyle(0x964B00, 1);
       rockGraphics.fillCircle(10, 10, 10);
       rockGraphics.generateTexture('rock', 20, 20);
 
       // --- Partículas de explosión ---
-      // Crear textura para los cuadraditos de explosión (6x6, color dorado)
       let explosionGraphics = this.make.graphics({ x: 0, y: 0, add: false });
       explosionGraphics.fillStyle(0xffd700, 1);
       explosionGraphics.fillRect(0, 0, 6, 6);
@@ -97,16 +92,20 @@ function PhaserGame() {
       this.player.setCollideWorldBounds(true);
       this.physics.add.collider(this.player, this.walls);
 
-      // Configurar controles: flechas para moverse y espacio para lanzar la roca
+      // Configurar controles
       this.cursors = this.input.keyboard.createCursorKeys();
       this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
       // Grupo para las rocas lanzadas
-      this.rocks = this.physics.add.group();
+      this.rocks = this.physics.add.group({
+        defaultKey: 'rock',
+        collideWorldBounds: true,
+      });
 
       // Función para generar la explosión de la roca
       this.explodeRock = (rock) => {
-        const numParticles = 8; // 8 cuadraditos
+        if (!rock.active) return; // Evitar explosiones duplicadas
+        const numParticles = 8;
         for (let i = 0; i < numParticles; i++) {
           let angle = Phaser.Math.DegToRad(i * (360 / numParticles));
           let particle = this.physics.add.sprite(rock.x, rock.y, 'explosion');
@@ -120,15 +119,17 @@ function PhaserGame() {
             },
           });
         }
+        rock.destroy(); // Destruir la roca después de explotar
       };
     }
 
     function update() {
       const tileSize = 32;
       const speed = 150;
-      let vx = 0, vy = 0;
+      let vx = 0,
+        vy = 0;
 
-      // Actualizar movimiento del jugador y su ángulo según la tecla presionada
+      // Movimiento del jugador
       if (this.cursors.left.isDown) {
         vx = -speed;
         this.player.setAngle(180);
@@ -143,7 +144,7 @@ function PhaserGame() {
         this.player.setAngle(90);
       }
 
-      // Corrección de alineación: si se mueve horizontalmente, ajustar verticalmente y viceversa
+      // Corrección de alineación
       if (this.cursors.left.isDown || this.cursors.right.isDown) {
         const desiredY = Math.round((this.player.y - tileSize / 2) / tileSize) * tileSize + tileSize / 2;
         const deltaY = desiredY - this.player.y;
@@ -160,43 +161,40 @@ function PhaserGame() {
 
       // Lanzar roca al presionar espacio
       if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
-        const rockSpeed = 200;
+        const rockSpeed = 200; // Velocidad constante de la roca
         const angleRad = Phaser.Math.DegToRad(this.player.angle);
         const rockVx = rockSpeed * Math.cos(angleRad);
         const rockVy = rockSpeed * Math.sin(angleRad);
 
         // Offset para que la roca aparezca fuera del collider del jugador
-        const offset = 20;
+        const offset = 25;
         const spawnX = this.player.x + offset * Math.cos(angleRad);
         const spawnY = this.player.y + offset * Math.sin(angleRad);
 
-        const rock = this.physics.add.sprite(spawnX, spawnY, 'rock');
-        rock.startX = spawnX;
+        // Crear la roca
+        const rock = this.rocks.create(spawnX, spawnY, 'rock');
+        rock.startX = spawnX; // Posición inicial para medir distancia
         rock.startY = spawnY;
-        rock.setVelocity(rockVx, rockVy);
-        rock.setCollideWorldBounds(true);
-        rock.body.onWorldBounds = true;
-        this.rocks.add(rock);
+        rock.setVelocity(rockVx, rockVy); // Asignar velocidad constante
+        rock.body.setAllowGravity(false); // Desactivar gravedad
+        rock.body.setBounce(0); // Sin rebote para evitar que se atasque
 
-        // Evitar que la roca colisione con el jugador:
-        // Se añade un collider con processCallback que siempre devuelve false.
+        // Evitar colisión con el jugador
         this.physics.add.collider(rock, this.player, null, () => false, this);
 
-        // Si la roca choca con una pared, explota y se destruye
+        // Colisión con paredes: explota al instante
         this.physics.add.collider(rock, this.walls, () => {
-          if (rock.active) {
-            this.explodeRock(rock);
-            rock.destroy();
-          }
+          this.explodeRock(rock);
         });
       }
 
-      // Verificar cada roca lanzada: si ha recorrido 80 píxeles, explota y se destruye
+      // Verificar distancia recorrida por las rocas
       this.rocks.getChildren().forEach((rock) => {
-        const distance = Phaser.Math.Distance.Between(rock.startX, rock.startY, rock.x, rock.y);
-        if (distance >= 80 && rock.active) {
-          this.explodeRock(rock);
-          rock.destroy();
+        if (rock.active) {
+          const distance = Phaser.Math.Distance.Between(rock.startX, rock.startY, rock.x, rock.y);
+          if (distance >= 80) { // Explota después de 80 píxeles
+            this.explodeRock(rock);
+          }
         }
       });
     }
