@@ -33,7 +33,7 @@ const maps = [
         { x: 13, y: 3 },
       ],
       player1: { x: 1, y: 1 },
-      player2: { x: 13, y: 1 },
+      player2: { x: 11.5, y: 0},
     },
   },
   {
