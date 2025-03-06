@@ -183,7 +183,6 @@ function PhaserGame() {
       this.player1.lastDirection = 'right';
       console.log('Jugador 1 - Sprite en:', this.player1.x, this.player1.y);
       console.log('Jugador 1 - Colisionador en:', this.player1.body.x, this.player1.body.y);
-      console.log('Jugador 1 - Centro del colisionador en:', this.player1.body.centerX, this.player1.body.centerY);
 
       this.player2 = null;
 
@@ -244,9 +243,9 @@ function PhaserGame() {
         const rockSpeed = 200; // Velocidad para recorrer 80px en un tiempo razonable
         let rockVx = 0,
           rockVy = 0;
-        // Usar el centro exacto del colisionador del jugador
-        let spawnX = player.body.centerX;
-        let spawnY = player.body.centerY;
+        // Usar la posición del sprite del jugador directamente
+        let spawnX = player.x;
+        let spawnY = player.y;
 
         // Ajustar la velocidad según la dirección del movimiento
         switch (player.lastDirection) {
@@ -270,16 +269,20 @@ function PhaserGame() {
         console.log('Lanzando roca desde:', spawnX, spawnY, 'en dirección:', player.lastDirection);
 
         const rock = this.rocks.create(spawnX, spawnY, 'rock');
+        rock.setOrigin(0.5, 0.5); // Centrar el sprite de la roca
         rock.setScale(tileSize / rock.width * 0.5);
         rock.body.setSize(200, 200);
-        rock.body.updateFromGameObject();
+        // Ajustar el offset del colisionador para que esté centrado en spawnX, spawnY
+        rock.body.setOffset(-100, -100); // Desplazar el colisionador hacia arriba/izquierda para centrarlo
+        rock.body.reset(spawnX, spawnY); // Resetear la posición del body al centro del jugador
         rock.startX = spawnX; // Guardamos posición inicial
         rock.startY = spawnY;
         rock.setVelocity(rockVx, rockVy);
         rock.body.setAllowGravity(false);
         rock.body.setBounce(0);
 
-        console.log('Posición de la roca después de crearla:', rock.x, rock.y);
+        console.log('Posición de la roca después de crearla - Sprite:', rock.x, rock.y);
+        console.log('Posición de la roca después de crearla - Body:', rock.body.x, rock.body.y);
 
         // Colisiones de la roca
         this.physics.add.collider(rock, player, null, () => false, this); // No colisiona con el jugador que la lanzó
@@ -453,15 +456,14 @@ function PhaserGame() {
         this.player2.setVelocityY(vy2);
       }
 
-      // Temporalmente desactivado para depurar la posición inicial de la roca
-      // this.rocks.getChildren().forEach((rock) => {
-      //   if (rock.active) {
-      //     const distance = Phaser.Math.Distance.Between(rock.startX, rock.startY, rock.x, rock.y);
-      //     if (distance >= 80) { // Explotar después de 80 píxeles
-      //       this.explodeRock(rock);
-      //     }
-      //   }
-      // });
+      this.rocks.getChildren().forEach((rock) => {
+        if (rock.active) {
+          const distance = Phaser.Math.Distance.Between(rock.startX, rock.startY, rock.x, rock.y);
+          if (distance >= 80) { // Explotar después de 80 píxeles
+            this.explodeRock(rock);
+          }
+        }
+      });
     }
 
     return () => {
