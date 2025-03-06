@@ -65,7 +65,6 @@ function PhaserGame() {
   const gameRef = useRef(null);
   const gameInstance = useRef(null);
   const [gameOver, setGameOver] = useState(false);
-  const [currentMapIndex, setCurrentMapIndex] = useState(0);
 
   useEffect(() => {
     if (gameInstance.current) {
@@ -73,8 +72,8 @@ function PhaserGame() {
       gameInstance.current = null;
     }
 
-    const currentMap = maps[currentMapIndex];
-    const tileSize = currentMap.tileSize; // 32 píxeles
+    const currentMap = maps[0]; // Usamos el primer mapa por defecto
+    const tileSize = currentMap.tileSize;
     const config = {
       type: Phaser.AUTO,
       width: currentMap.width * tileSize,
@@ -88,7 +87,7 @@ function PhaserGame() {
       parent: gameRef.current,
       physics: {
         default: 'arcade',
-        arcade: { gravity: { y: 0 }, debug: true }, // Debug activado
+        arcade: { gravity: { y: 0 }, debug: true },
       },
       audio: { disableWebAudio: true },
       input: { gamepad: true },
@@ -119,7 +118,6 @@ function PhaserGame() {
 
     function create() {
       console.log('Create ejecutado');
-      const tileSize = currentMap.tileSize;
       this.cameras.main.setBackgroundColor('#000000');
 
       // Fondo de suelo
@@ -145,9 +143,9 @@ function PhaserGame() {
               row * tileSize + tileSize / 2,
               'wall'
             );
-            wall.setScale(tileSize / wall.width); // Escalado visual
-            wall.body.setSize(32, 32); // Colider fijo: 32x32 píxeles
-            wall.body.updateFromGameObject(); // Sincronizar posición del colider
+            wall.setScale(tileSize / wall.width);
+            wall.body.setSize(32, 32);
+            wall.body.updateFromGameObject();
             wall.body.immovable = true;
           }
         }
@@ -162,9 +160,9 @@ function PhaserGame() {
           pos.y * tileSize + tileSize / 2,
           'breakable'
         );
-        breakable.setScale(tileSize / breakable.width); // Escalado visual
-        breakable.body.setSize(32, 32); // Colider fijo: 32x32 píxeles
-        breakable.body.updateFromGameObject(); // Sincronizar posición del colider
+        breakable.setScale(tileSize / breakable.width);
+        breakable.body.setSize(32, 32);
+        breakable.body.updateFromGameObject();
         breakable.body.immovable = true;
         breakable.hits = 0;
       });
@@ -176,14 +174,16 @@ function PhaserGame() {
         currentMap.layout.player1.y * tileSize + tileSize / 2,
         'player1'
       );
-      this.player1.setScale(tileSize / this.player1.width * 0.75); // Escalado visual
-      this.player1.body.setSize(24, 24); // Colider fijo: 24x24 píxeles
-      this.player1.body.updateFromGameObject(); // Sincronizar posición del colider
+      this.player1.setScale(tileSize / this.player1.width * 0.75);
+      this.player1.body.setSize(100, 100);
+      this.player1.body.updateFromGameObject();
       this.player1.setCollideWorldBounds(true);
       this.physics.add.collider(this.player1, this.walls);
       this.physics.add.collider(this.player1, this.breakables);
       this.player1.lastDirection = 'right';
-      console.log('Jugador 1 creado');
+      console.log('Jugador 1 - Sprite en:', this.player1.x, this.player1.y);
+      console.log('Jugador 1 - Colisionador en:', this.player1.body.x, this.player1.body.y);
+      console.log('Jugador 1 - Centro del colisionador en:', this.player1.body.centerX, this.player1.body.centerY);
 
       this.player2 = null;
 
@@ -195,9 +195,9 @@ function PhaserGame() {
           pos.y * tileSize + tileSize / 2,
           'enemy'
         );
-        enemy.setScale(tileSize / enemy.width * 0.75); // Escalado visual
-        enemy.body.setSize(24, 24); // Colider fijo: 24x24 píxeles
-        enemy.body.updateFromGameObject(); // Sincronizar posición del colider
+        enemy.setScale(tileSize / enemy.width * 0.75);
+        enemy.body.setSize(600, 600);
+        enemy.body.updateFromGameObject();
         enemy.setCollideWorldBounds(true);
         enemy.setVelocity(Phaser.Math.Between(-100, 100), Phaser.Math.Between(-100, 100));
         enemy.setBounce(1);
@@ -223,6 +223,7 @@ function PhaserGame() {
       // Funciones
       this.explodeRock = (rock) => {
         if (!rock.active) return;
+        console.log('Roca explotando en:', rock.x, rock.y);
         const numParticles = 8;
         for (let i = 0; i < numParticles; i++) {
           let angle = Phaser.Math.DegToRad(i * (360 / numParticles));
@@ -240,50 +241,48 @@ function PhaserGame() {
       };
 
       this.launchRock = (player) => {
-        const rockSpeed = 200;
+        const rockSpeed = 200; // Velocidad para recorrer 80px en un tiempo razonable
         let rockVx = 0,
           rockVy = 0;
-        let angleRad = 0;
+        // Usar el centro exacto del colisionador del jugador
+        let spawnX = player.body.centerX;
+        let spawnY = player.body.centerY;
 
+        // Ajustar la velocidad según la dirección del movimiento
         switch (player.lastDirection) {
           case 'left':
             rockVx = -rockSpeed;
-            angleRad = Phaser.Math.DegToRad(180);
             break;
           case 'right':
             rockVx = rockSpeed;
-            angleRad = Phaser.Math.DegToRad(0);
             break;
           case 'up':
             rockVy = -rockSpeed;
-            angleRad = Phaser.Math.DegToRad(-90);
             break;
           case 'down':
             rockVy = rockSpeed;
-            angleRad = Phaser.Math.DegToRad(90);
             break;
           default:
-            rockVx = rockSpeed;
-            angleRad = Phaser.Math.DegToRad(0);
+            rockVx = rockSpeed; // Por defecto a la derecha
             break;
         }
 
-        const offset = tileSize * 0.75;
-        const spawnX = player.x + offset * Math.cos(angleRad);
-        const spawnY = player.y + offset * Math.sin(angleRad);
+        console.log('Lanzando roca desde:', spawnX, spawnY, 'en dirección:', player.lastDirection);
 
         const rock = this.rocks.create(spawnX, spawnY, 'rock');
-        rock.setScale(tileSize / rock.width * 0.5); // Escalado visual
-        rock.body.setSize(16, 16); // Colider fijo: 16x16 píxeles
-        rock.body.updateFromGameObject(); // Sincronizar posición del colider
-        rock.startX = spawnX;
+        rock.setScale(tileSize / rock.width * 0.5);
+        rock.body.setSize(200, 200);
+        rock.body.updateFromGameObject();
+        rock.startX = spawnX; // Guardamos posición inicial
         rock.startY = spawnY;
         rock.setVelocity(rockVx, rockVy);
-        rock.setAngle(Phaser.Math.RadToDeg(angleRad));
         rock.body.setAllowGravity(false);
         rock.body.setBounce(0);
 
-        this.physics.add.collider(rock, player, null, () => false, this);
+        console.log('Posición de la roca después de crearla:', rock.x, rock.y);
+
+        // Colisiones de la roca
+        this.physics.add.collider(rock, player, null, () => false, this); // No colisiona con el jugador que la lanzó
         this.physics.add.collider(rock, this.walls, () => this.explodeRock(rock));
         this.physics.add.collider(rock, this.breakables, (rock, breakable) => {
           breakable.hits += 1;
@@ -389,8 +388,8 @@ function PhaserGame() {
           'player2'
         );
         this.player2.setScale(tileSize / this.player2.width * 0.75);
-        this.player2.body.setSize(24, 24); // Colider fijo: 24x24 píxeles
-        this.player2.body.updateFromGameObject(); // Sincronizar posición del colider
+        this.player2.body.setSize(100, 100);
+        this.player2.body.updateFromGameObject();
         this.player2.setCollideWorldBounds(true);
         this.physics.add.collider(this.player2, this.walls);
         this.physics.add.collider(this.player2, this.breakables);
@@ -454,13 +453,15 @@ function PhaserGame() {
         this.player2.setVelocityY(vy2);
       }
 
-      // Verificar distancia recorrida por las rocas
-      this.rocks.getChildren().forEach((rock) => {
-        if (rock.active) {
-          const distance = Phaser.Math.Distance.Between(rock.startX, rock.startY, rock.x, rock.y);
-          if (distance >= tileSize * 2.5) this.explodeRock(rock);
-        }
-      });
+      // Temporalmente desactivado para depurar la posición inicial de la roca
+      // this.rocks.getChildren().forEach((rock) => {
+      //   if (rock.active) {
+      //     const distance = Phaser.Math.Distance.Between(rock.startX, rock.startY, rock.x, rock.y);
+      //     if (distance >= 80) { // Explotar después de 80 píxeles
+      //       this.explodeRock(rock);
+      //     }
+      //   }
+      // });
     }
 
     return () => {
@@ -469,11 +470,10 @@ function PhaserGame() {
         gameInstance.current = null;
       }
     };
-  }, [currentMapIndex, gameOver]);
+  }, [gameOver]);
 
   const handleRestart = () => {
-    setGameOver(false);
-    setCurrentMapIndex((prev) => (prev + 1) % maps.length);
+    window.location.reload(); // Recargar la página para evitar duplicación
   };
 
   return (
