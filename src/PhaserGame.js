@@ -273,7 +273,7 @@ function PhaserGame() {
         rock.setScale(tileSize / rock.width * 0.5);
         rock.body.setSize(200, 200);
         // Ajustar el offset del colisionador para que esté centrado en spawnX, spawnY
-        rock.body.setOffset(-100, -100); // Desplazar el colisionador hacia arriba/izquierda para centrarlo
+       
         rock.body.reset(spawnX, spawnY); // Resetear la posición del body al centro del jugador
         rock.startX = spawnX; // Guardamos posición inicial
         rock.startY = spawnY;
