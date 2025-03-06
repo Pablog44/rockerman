@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/rockerman/static/css/main.f855e6bc.css",
-    "main.js": "/rockerman/static/js/main.7e278942.js",
+    "main.js": "/rockerman/static/js/main.89507eda.js",
     "static/media/rock.png": "/rockerman/static/media/rock.d83403aae1f48a5ee84d.png",
     "static/media/wall.png": "/rockerman/static/media/wall.8d749c186a1eeef227b3.png",
     "static/media/breakable.png": "/rockerman/static/media/breakable.88a6ae5a6e563894127a.png",
@@ -9,10 +9,10 @@
     "static/media/explosion.png": "/rockerman/static/media/explosion.5d4aa117c6aea90db30c.png",
     "index.html": "/rockerman/index.html",
     "main.f855e6bc.css.map": "/rockerman/static/css/main.f855e6bc.css.map",
-    "main.7e278942.js.map": "/rockerman/static/js/main.7e278942.js.map"
+    "main.89507eda.js.map": "/rockerman/static/js/main.89507eda.js.map"
   },
   "entrypoints": [
     "static/css/main.f855e6bc.css",
-    "static/js/main.7e278942.js"
+    "static/js/main.89507eda.js"
   ]
 }
