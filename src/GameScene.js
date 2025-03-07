@@ -1,7 +1,7 @@
 // GameScene.js
 import Phaser from 'phaser';
 
-export const createGameScene = (currentMap, setGameOver) => {
+export const createGameScene = (currentMap, gameState, setGameState) => {
   return {
     preload() {
       console.log('Preload ejecutado');
@@ -180,14 +180,14 @@ export const createGameScene = (currentMap, setGameOver) => {
             this.explodeRock(rock);
             this.player2.destroy();
             this.player2 = null;
-            if (!this.player1) setGameOver(true);
+            if (!this.player1) setGameState({ ...gameState, gameOver: true });
           });
         } else if (player === this.player2 && this.player1) {
           this.physics.add.collider(rock, this.player1, () => {
             this.explodeRock(rock);
             this.player1.destroy();
             this.player1 = null;
-            if (!this.player2) setGameOver(true);
+            if (!this.player2) setGameState({ ...gameState, gameOver: true });
           });
         }
       };
@@ -195,13 +195,13 @@ export const createGameScene = (currentMap, setGameOver) => {
       this.physics.add.collider(this.player1, this.enemies, () => {
         this.player1.destroy();
         this.player1 = null;
-        if (!this.player2) setGameOver(true);
+        if (!this.player2) setGameState({ ...gameState, gameOver: true });
       });
       this.physics.add.collider(this.enemies, this.enemies);
     },
 
     update() {
-      if (setGameOver().gameOver) return;
+      if (gameState.gameOver || gameState.gameFinished) return;
 
       const tileSize = currentMap.tileSize;
       const speed = 150;
@@ -278,7 +278,7 @@ export const createGameScene = (currentMap, setGameOver) => {
         this.physics.add.collider(this.player2, this.enemies, () => {
           this.player2.destroy();
           this.player2 = null;
-          if (!this.player1) setGameOver(true);
+          if (!this.player1) setGameState({ ...gameState, gameOver: true });
         });
         if (this.player1) this.physics.add.collider(this.player1, this.player2);
         this.player2.lastDirection = 'left';
@@ -343,6 +343,17 @@ export const createGameScene = (currentMap, setGameOver) => {
           }
         }
       });
+
+      // Check if all enemies are defeated
+      if (this.enemies.countActive() === 0) {
+        if (gameState.mapIndex < gameState.totalMaps - 1) {
+          // Move to next map
+          setGameState({ ...gameState, mapIndex: gameState.mapIndex + 1 });
+        } else {
+          // Game finished
+          setGameState({ ...gameState, gameFinished: true });
+        }
+      }
     },
   };
 };

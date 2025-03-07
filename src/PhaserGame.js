@@ -1,13 +1,18 @@
 // PhaserGame.js
 import React, { useRef, useEffect, useState } from 'react';
 import Phaser from 'phaser';
-import { getMap } from './MapConfig';
+import { getMap, maps } from './MapConfig';
 import { createGameScene } from './GameScene';
 
 function PhaserGame() {
   const gameRef = useRef(null);
   const gameInstance = useRef(null);
-  const [gameOver, setGameOver] = useState(false);
+  const [gameState, setGameState] = useState({
+    mapIndex: 0,
+    gameOver: false,
+    gameFinished: false,
+    totalMaps: maps.length,
+  });
 
   useEffect(() => {
     if (gameInstance.current) {
@@ -15,7 +20,7 @@ function PhaserGame() {
       gameInstance.current = null;
     }
 
-    const currentMap = getMap(0); // Puedes cambiar el índice para seleccionar otro mapa
+    const currentMap = getMap(gameState.mapIndex);
     const tileSize = currentMap.tileSize;
     const config = {
       type: Phaser.AUTO,
@@ -34,7 +39,7 @@ function PhaserGame() {
       },
       audio: { disableWebAudio: true },
       input: { gamepad: true },
-      scene: createGameScene(currentMap, () => ({ gameOver, setGameOver })),
+      scene: createGameScene(currentMap, gameState, setGameState),
     };
 
     gameInstance.current = new Phaser.Game(config);
@@ -45,10 +50,15 @@ function PhaserGame() {
         gameInstance.current = null;
       }
     };
-  }, [gameOver]);
+  }, [gameState.mapIndex, gameState.gameOver, gameState.gameFinished]); // Dependencies are specific fields
 
   const handleRestart = () => {
-    window.location.reload();
+    setGameState({
+      mapIndex: 0,
+      gameOver: false,
+      gameFinished: false,
+      totalMaps: maps.length,
+    });
   };
 
   return (
@@ -71,7 +81,7 @@ function PhaserGame() {
           position: 'relative',
         }}
       >
-        {gameOver && (
+        {gameState.gameOver && (
           <div
             style={{
               position: 'absolute',
@@ -95,6 +105,40 @@ function PhaserGame() {
                 padding: '10px 20px',
                 fontSize: '24px',
                 backgroundColor: '#ff4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+              }}
+            >
+              Reiniciar
+            </button>
+          </div>
+        )}
+        {gameState.gameFinished && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              color: 'white',
+              fontFamily: 'Arial, sans-serif',
+            }}
+          >
+            <h1 style={{ fontSize: '48px', margin: '20px' }}>¡Juego Terminado!</h1>
+            <button
+              onClick={handleRestart}
+              style={{
+                padding: '10px 20px',
+                fontSize: '24px',
+                backgroundColor: '#44ff44',
                 color: 'white',
                 border: 'none',
                 borderRadius: '5px',
