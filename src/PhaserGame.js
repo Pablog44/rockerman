@@ -50,7 +50,7 @@ function PhaserGame() {
         gameInstance.current = null;
       }
     };
-  }, [gameState.mapIndex, gameState.gameOver, gameState.gameFinished]); // Dependencies are specific fields
+  }, [gameState.mapIndex, gameState.gameOver, gameState.gameFinished, gameState]); // Dependencies are specific fields
 
   const handleRestart = () => {
     setGameState({
