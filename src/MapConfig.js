@@ -75,6 +75,42 @@ export const maps = [
       player2: { x: 18, y: 1 },
     },
   },
+  {
+    name: 'Mapa 3 - Grande Horizontal',
+    width: 25,
+    height: 15,
+    tileSize: 32,
+    textures: {
+      floor: floorImg,
+      wall: wallImg,
+      breakable: breakableImg,
+      enemy: enemyImg,
+      player1: player1Img,
+      player2: player2Img,
+      rock: rockImg,
+      explosion: explosionImg,
+    },
+    layout: {
+      walls: (row, col) => row === 0 || row === 14 || col === 0 || col === 24 || (row % 2 === 0 && col % 2 === 0),
+      breakables: [
+        { x: 3, y: 3 },
+        { x: 7, y: 5 },
+        { x: 11, y: 7 },
+        { x: 15, y: 9 },
+        { x: 19, y: 11 },
+        { x: 21, y: 3 },
+        { x: 13, y: 13 },
+      ],
+      enemies: [
+        { x: 5, y: 5 },
+        { x: 12, y: 8 },
+        { x: 18, y: 4 },
+        { x: 22, y: 10 },
+      ],
+      player1: { x: 1, y: 1 },
+      player2: { x: 23, y: 1 },
+    },
+  },
 ];
 
 // Function to get a map by index
